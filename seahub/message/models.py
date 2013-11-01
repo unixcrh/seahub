@@ -9,6 +9,7 @@ from django.forms import ModelForm
 from django.utils.translation import ugettext as _
 
 from seahub.base.fields import LowerCaseCharField
+from seahub.utils import get_service_url
 
 class UserMessageManager(models.Manager):
     def get_messages_related_to_user(self, username):
@@ -99,12 +100,15 @@ def add_share_repo_msg(sender, **kwargs):
     repo = kwargs.get('repo', None)
     
     if from_user and to_user and repo:
+        service_url = get_service_url()
+        url_root = service_url.rstrip('/')
         from seahub.base.templatetags.seahub_tags import email2nickname
-        
-        msg = _(u"(System) %(user)s has shared a library named <a href='%(href)s'>%(repo_name)s</a> to you.") % \
+
+        msg = _(u"(System) %(user)s has shared library %(repo_name)s (%(href)s) to you.") % \
             {'user': email2nickname(from_user),
-             'href': reverse('repo', args=[repo.id]),
-             'repo_name': repo.name}
+             'repo_name': repo.name,
+             'href': '%s%s' % (url_root, reverse('repo', args=[repo.id])),
+             }
         UserMessage.objects.add_unread_message(from_user, to_user, msg)
 
 @receiver(share_file_to_user_successful)
@@ -113,12 +117,15 @@ def add_share_file_msg(sender, **kwargs):
     file_name = os.path.basename(priv_share.path)
 
     if priv_share is not None:
+        service_url = get_service_url()
+        url_root = service_url.rstrip('/')
         from seahub.base.templatetags.seahub_tags import email2nickname
 
-        msg = _(u"(System) %(user)s has shared a file named <a href='%(href)s'>%(file_name)s</a> to you.") % \
+        msg = _(u"(System) %(user)s has shared file %(file_name)s (%(href)s) to you.") % \
             {'user': email2nickname(priv_share.from_user),
-             'href': reverse('view_priv_shared_file', args=[priv_share.token]),
-             'file_name': file_name}
+             'file_name': file_name,
+             'href': '%s%s' % (url_root, reverse('view_priv_shared_file', args=[priv_share.token])),
+             }
         UserMessage.objects.add_unread_message(priv_share.from_user,
                                                priv_share.to_user, msg)
         
