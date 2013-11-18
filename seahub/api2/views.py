@@ -41,7 +41,9 @@ from seahub.utils import gen_file_get_url, gen_token, gen_file_upload_url, \
 from seahub.utils.star import star_file, unstar_file
 from seahub.base.templatetags.seahub_tags import email2nickname
 from seahub.avatar.templatetags.avatar_tags import avatar_url
+from seahub.message.models import UserMessage
 import seahub.settings as settings
+
 try:
     from seahub.settings import CLOUD_MODE
 except ImportError:
@@ -1929,6 +1931,22 @@ class EventsView(APIView):
                             status=200,
                             content_type=json_content_type)
         return resp
+
+class MessagesCountView(APIView):
+    authentication_classes = (TokenAuthentication, )
+    permission_classes = (IsAuthenticated,)
+    throttle_classes = (UserRateThrottle, )
+
+    def get(self, request, format=None):
+        username = request.user.username
+        ret = {}
+
+        notes = UserNotification.objects.filter(to_user=username)
+        ret['group_messages'] = len(notes)
+        ret['personal_messages'] = UserMessage.objects.count_unread_messages_by_user(username)
+
+        return HttpResponse(json.dumps(ret), status=200,
+                            content_type=json_content_type)
 
 class AvatarView(APIView):
     authentication_classes = (TokenAuthentication, )
